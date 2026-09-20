@@ -1,0 +1,53 @@
+name: CI
+
+# Correctness gate for every push and pull request. The addon has no build
+# step, so the checks are the ones that catch real breakage: every Lua file
+# must parse as Lua 5.1 (what the client runs), and the TOC must list only
+# files that exist and carry Interface and Version lines.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install luaparse
+        run: npm i -g luaparse@0.3.1
+
+      - name: Lua 5.1 syntax
+        run: node tools/check.js
+
+      - name: TOC sanity
+        run: |
+          toc=AutoSpellRanks/AutoSpellRanks.toc
+          test -f "$toc" || { echo "missing $toc"; exit 1; }
+          grep -q '^## Interface:' "$toc" || { echo "no ## Interface line"; exit 1; }
+          grep -q '^## Version:' "$toc" || { echo "no ## Version line"; exit 1; }
+          status=0
+          while IFS= read -r line; do
+            line="${line%$'\r'}"
+            case "$line" in ''|'#'*) continue ;; esac
+            f="AutoSpellRanks/${line//\\//}"
+            if [ -f "$f" ]; then echo "ok   $f"; else echo "MISSING $f"; status=1; fi
+          done < "$toc"
+          exit $status
