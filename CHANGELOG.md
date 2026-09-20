@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Releases publish to CurseForge automatically once the project id is set in the TOC.
+
 ## 1.0.0-forever
 
 First release for World of Warcraft: Forever (interface 16001). A standalone version of the Spell Ranks module from [MooseMode](https://github.com/Moose-Ltd/MooseMode).

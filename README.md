@@ -84,7 +84,11 @@ node tools/make_icon.js                # regenerate media/icon.tga and the PNG p
 node tools/make_icon.js --png out.png --size 512   # the icon at any size (avatars, listings)
 ```
 
-[`ci.yml`](./.github/workflows/ci.yml) runs the parse and a TOC check on every push; [`release.yml`](./.github/workflows/release.yml) builds and attaches the zip when a `v*` tag is pushed.
+[`ci.yml`](./.github/workflows/ci.yml) runs the parse and a TOC check on every push, and fails a pull request that changes the addon without a changelog line.
+
+### Releasing
+
+Every change adds a line under `## Unreleased` in `CHANGELOG.md`. A release is: rename that heading to the version, bump `## Version` in the TOC, commit `Version X.Y.Z-forever`, tag `vX.Y.Z-forever`, push with tags. [`release.yml`](./.github/workflows/release.yml) builds the zip, publishes the GitHub Release and uploads to CurseForge with the changelog section as the file notes. Patch releases are welcome. Setup and the variables involved are in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Beta note
 
