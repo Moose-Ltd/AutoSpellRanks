@@ -1,0 +1,5 @@
+# WoW / OS noise
+Thumbs.db
+.DS_Store
+*.bak
+dist/

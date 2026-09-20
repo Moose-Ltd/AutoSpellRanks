@@ -1,0 +1,12 @@
+## Interface: 16001, 120105
+## Title: |cffb04cffAuto Spell Ranks|r
+## Notes: Keeps your action bars on the highest spell rank you know. Built for WoW: Forever.
+## Author: Moose
+## Version: 1.0.0-forever
+## X-License: All Rights Reserved. See LICENSE
+## X-Website: https://github.com/Moose-Ltd/AutoSpellRanks
+## IconTexture: Interface\AddOns\AutoSpellRanks\media\icon.tga
+## SavedVariables: AutoSpellRanksDB
+## X-Flavor-Note: 16001 = WoW Forever (1.60.x, _classic_beta_). 120105 = Retail 12.1.5, which shares the same API.
+
+AutoSpellRanks.lua
