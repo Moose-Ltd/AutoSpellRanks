@@ -18,6 +18,7 @@
 --   on | off        enable or disable
 --   report on|off   chat lines for each swap
 --   scan            scan and upgrade now, with a summary
+--   debug           list what each button on screen holds (AutoSpellRanksDB.debug)
 --   help            list commands
 -------------------------------------------------------------------------------
 
@@ -60,8 +61,14 @@ local function OnOff(b) return b and "|cff00ff00on|r" or "|cffff0000off|r" end
 -- Spell lookups
 -------------------------------------------------------------------------------
 
+-- The normal action bars use slots 1-180. The Gamepad UI (Alpha) keeps its
+-- own layout in the slots above: 181-208 on its main page, more for the
+-- LT / RT pages and form pages. Scan well past that; an empty or invalid
+-- slot costs next to nothing.
+local MAX_ACTION_SLOT = 1200
+
 local function NumActionSlots()
-    return NUM_ACTIONBAR_SLOTS or 180
+    return MAX_ACTION_SLOT
 end
 
 local function SpellName(spellID)
@@ -216,8 +223,8 @@ local function Scan(force)
     local swapped, scanned = 0, 0
 
     for slot = 1, NumActionSlots() do
-        local actionType, id = GetActionInfo(slot)
-        if actionType == "spell" and id and not IsSecret(id) then
+        local okInfo, actionType, id = pcall(GetActionInfo, slot)
+        if okInfo and actionType == "spell" and id and not IsSecret(id) then
             scanned = scanned + 1
             local name = SpellName(id)
             if name then
@@ -262,6 +269,86 @@ local function ScheduleScan(delay, force)
         scanTimer = nil
         Scan(force)
     end)
+end
+
+-------------------------------------------------------------------------------
+-- Debug: what every button on screen holds
+--
+-- For finding out where a UI (the Gamepad UI, another bar addon) keeps its
+-- buttons: each shown frame that carries an action slot or a spell, with
+-- the spell's rank and the highest rank you know. The full list goes to
+-- AutoSpellRanksDB.debug (written to disk on /reload); chat gets a summary.
+-------------------------------------------------------------------------------
+
+local function Field(f, key)
+    local ok, v = pcall(function() return f[key] end)
+    if ok and v ~= nil and not IsSecret(v) then return v end
+end
+
+local function Attr(f, key)
+    if type(f.GetAttribute) ~= "function" then return nil end
+    local ok, v = pcall(f.GetAttribute, f, key)
+    if ok and v ~= nil and not IsSecret(v) then return v end
+end
+
+local function FrameName(f)
+    for _, method in ipairs({ "GetDebugName", "GetName" }) do
+        if type(f[method]) == "function" then
+            local ok, n = pcall(f[method], f)
+            if ok and type(n) == "string" and not IsSecret(n) and n ~= "" then return n end
+        end
+    end
+    return tostring(f)
+end
+
+local function SpellText(spellID)
+    local name = SpellName(spellID)
+    if not name then return "spell " .. tostring(spellID) end
+    local text = ("%s r%d (id %d)"):format(name, RankNumber(spellID), spellID)
+    local better = HighestRank(name, spellID)
+    if better then text = text .. (" OLD, r%d known"):format(RankNumber(better)) end
+    return text
+end
+
+-- One line for a shown frame that carries an action slot or a spell, else nil.
+local function Describe(f)
+    local visible = f:IsVisible()
+    if not visible or IsSecret(visible) then return nil end
+    local slot = Field(f, "action") or Attr(f, "action") or Field(f, "actionID")
+    if type(slot) ~= "number" then slot = nil end
+    local kind = Attr(f, "type")
+    local spell = (kind == "spell" and Attr(f, "spell")) or Field(f, "spellID")
+    local what
+    if slot then
+        local actionType, id = GetActionInfo(slot)
+        if actionType == "spell" and id and not IsSecret(id) then
+            what = ("slot %d: %s"):format(slot, SpellText(id))
+        else
+            what = ("slot %d: %s"):format(slot, tostring(actionType or "empty"))
+        end
+    elseif spell then
+        local id = tonumber(spell) or (C_Spell.GetSpellInfo(spell) or {}).spellID
+        what = ("no slot, %s: %s"):format(kind == "spell" and "spell attribute" or "spellID field",
+            id and SpellText(id) or tostring(spell))
+    end
+    return what and (FrameName(f) .. "  " .. what)
+end
+
+local function DebugButtons()
+    local lines, old = {}, 0
+    local f = EnumerateFrames()
+    while f do
+        local ok, line = pcall(Describe, f)
+        if ok and line then
+            lines[#lines + 1] = line
+            if line:find(" OLD,") then old = old + 1 end
+        end
+        f = EnumerateFrames(f)
+    end
+    table.sort(lines)
+    db.debug = { when = date("%Y-%m-%d %H:%M:%S"), lines = lines }
+    Print(("%d buttons on screen hold an action or spell, %d of them on an old rank."):format(#lines, old))
+    Print("Full list saved to AutoSpellRanksDB.debug: /reload to write it to disk.")
 end
 
 -------------------------------------------------------------------------------
@@ -314,6 +401,7 @@ local function ShowHelp()
     Print("/asr on | off       enable or disable rank upgrades")
     Print("/asr report on|off  print a line for each swap")
     Print("/asr scan           scan the bars and upgrade now")
+    Print("/asr debug          list what the buttons on screen hold (saved on /reload)")
 end
 
 SLASH_AUTOSPELLRANKS1 = "/asr"
@@ -341,6 +429,8 @@ SlashCmdList.AUTOSPELLRANKS = function(msg)
         Print("report swaps " .. OnOff(db.report))
     elseif cmd == "scan" or cmd == "ranks" then
         Scan(true)
+    elseif cmd == "debug" then
+        DebugButtons()
     elseif cmd == "help" then
         ShowHelp()
     else

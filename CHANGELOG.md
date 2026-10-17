@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Gamepad UI: spells on the Gamepad UI (Alpha) bars now upgrade too. Those bars use action slots above 180, which the scan never reached.
+- New `/asr debug`: lists what each button on screen holds and which rank, saved to disk on `/reload`. For bug reports.
 - Releases publish to CurseForge automatically once the project id is set in the TOC.
 
 ## 1.0.0-forever

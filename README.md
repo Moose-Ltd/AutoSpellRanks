@@ -30,6 +30,7 @@ For contributors: [`CONTRIBUTING.md`](./CONTRIBUTING.md) · [`CHANGELOG.md`](./C
 ## Highlights
 
 - 🔼 **Always the top rank** - Every spell button on every bar is checked a few seconds after login and again whenever you learn a spell. A button holding an old rank is replaced in place.
+- 🎮 **Gamepad UI too** - The game's Gamepad UI (Alpha) keeps its own bars in action slots above the normal 180; those are upgraded the same way.
 - 🛡️ **Only ever upgrades** - The client is asked for the highest rank by name, then the spellbook is cross-checked. A swap happens only when the new rank is strictly higher and known to you.
 - ⚔️ **Combat-safe** - Nothing moves while you are fighting; the scan waits for combat to end. Macros, items and empty slots are never touched, and a scan waits if you are dragging something.
 - 💬 **Says what it did** - One chat line per spell, such as `Demon Armor -> Rank 3 (2 buttons)`. Turn it off with `/asr report off`.
@@ -70,6 +71,7 @@ flowchart LR
 | `/asr on`, `/asr off` | Enable or disable automatic upgrades              |
 | `/asr report on\|off` | Print a chat line for each swap, or stay quiet    |
 | `/asr scan`           | Scan the bars now and print a summary             |
+| `/asr debug`          | List what each button on screen holds, saved to `AutoSpellRanksDB.debug` on `/reload` |
 | `/asr help`           | List the commands                                 |
 
 `/autospellranks` works the same as `/asr`.
