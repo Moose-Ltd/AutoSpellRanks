@@ -2,7 +2,7 @@
 ## Title: |cffb04cffAuto Spell Ranks|r
 ## Notes: Keeps your action bars on the highest spell rank you know. Built for WoW: Forever.
 ## Author: Moose
-## Version: 1.0.0-forever
+## Version: 1.1.0-forever
 ## X-License: All Rights Reserved. See LICENSE
 ## X-Website: https://github.com/Moose-Ltd/AutoSpellRanks
 # CurseForge project id (the number on the project page). Once set, every
