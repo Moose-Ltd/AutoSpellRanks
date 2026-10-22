@@ -3,7 +3,7 @@ name: Feature request
 about: Something Auto Spell Ranks could handle better
 title: ''
 labels: enhancement
-assignees: MooseFTW
+assignees: matthewjfberry
 
 ---
 
