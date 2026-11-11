@@ -30,6 +30,7 @@ For contributors: [`CONTRIBUTING.md`](./CONTRIBUTING.md) · [`CHANGELOG.md`](./C
 ## Highlights
 
 - 🔼 **Always the top rank** - Every spell button on every bar is checked a few seconds after login and again whenever you learn a spell. A button holding an old rank is replaced in place.
+- 🖱️ **Click Casting too** - Spells bound to mouse clicks in the Click Casting window are upgraded in the same scan; button and modifiers stay as they are.
 - 🎮 **Gamepad UI too** - The game's Gamepad UI (Alpha) keeps its own bars in action slots above the normal 180; those are upgraded the same way.
 - 🛡️ **Only ever upgrades** - The client is asked for the highest rank by name, then the spellbook is cross-checked. A swap happens only when the new rank is strictly higher and known to you.
 - ⚔️ **Combat-safe** - Nothing moves while you are fighting; the scan waits for combat to end. Macros, items and empty slots are never touched, and a scan waits if you are dragging something.

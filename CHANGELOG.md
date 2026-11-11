@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Click Casting: spells bound to mouse clicks (Click Casting window) now upgrade too. The scan only looked at action bar slots, and click bindings live in their own profile. Skipped while the Click Casting window is open; if the client refuses the update, the addon says so once and leaves click bindings alone for the session.
+
 ## 1.1.0-forever
 
 - Gamepad UI: spells on the Gamepad UI (Alpha) bars now upgrade too. Those bars use action slots above 180, which the scan never reached.

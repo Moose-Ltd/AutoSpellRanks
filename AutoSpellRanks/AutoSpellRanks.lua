@@ -7,7 +7,8 @@
 -- buttons for the new rank, out of combat.
 --
 -- Name-based macros ("/cast Demon Armor") already cast the top rank; this
--- covers plain spell buttons dragged from the spellbook.
+-- covers plain spell buttons dragged from the spellbook, and spells bound
+-- to mouse clicks in the Click Casting window (C_ClickBindings).
 --
 -- Settings (AutoSpellRanksDB, account-wide):
 --   enabled   swap buttons when a new rank is learned (default on)
@@ -36,6 +37,7 @@ local pendingCombat = false  -- scan requested during combat
 local pendingForce  = false
 local scanTimer                -- debounce / retry timer
 local placeBroken   = false  -- PlaceAction threw once; never try again this session
+local clickBroken   = false  -- SetProfileByInfo threw once; never try again this session
 
 -------------------------------------------------------------------------------
 -- Helpers
@@ -197,10 +199,52 @@ local function PlaceSpell(slot, spellID)
     return true
 end
 
+-- Spell click bindings (Click Casting). Rewrites the active profile with
+-- every spell entry on its highest rank; button, modifiers and every other
+-- entry stay as they are. Calls record(name, newID) per upgraded binding.
+local function UpgradeClickBindings(record)
+    if clickBroken or not C_ClickBindings or not C_ClickBindings.GetProfileInfo
+       or not C_ClickBindings.SetProfileByInfo then
+        return 0, 0
+    end
+    -- The Click Casting window holds its own copy and saves it on close;
+    -- leave the profile alone while it is open.
+    if ClickBindingFrame and ClickBindingFrame:IsShown() then return 0, 0 end
+
+    local okInfo, profile = pcall(C_ClickBindings.GetProfileInfo)
+    if not okInfo or type(profile) ~= "table" then return 0, 0 end
+
+    local spellType = Enum and Enum.ClickBindingType and Enum.ClickBindingType.Spell or 1
+    local changes = {}
+    local scanned = 0
+    for i, info in ipairs(profile) do
+        local id = info.actionID
+        if info.type == spellType and id and not IsSecret(id) then
+            scanned = scanned + 1
+            local name = SpellName(id)
+            local newID = name and HighestRank(name, id)
+            if newID then
+                info.actionID = newID
+                changes[#changes + 1] = { name = name, id = newID }
+            end
+        end
+    end
+    if #changes == 0 then return 0, scanned end
+
+    local ok, err = pcall(C_ClickBindings.SetProfileByInfo, profile)
+    if not ok then
+        clickBroken = true
+        Print("the client refused to update click bindings (" .. tostring(err) .. "). Stopping for this session.")
+        return 0, 0
+    end
+    for _, c in ipairs(changes) do record(c.name, c.id) end
+    return #changes, scanned
+end
+
 local function Scan(force)
     if not db then return end
     if not force and not db.enabled then return end
-    if placeBroken then
+    if placeBroken and clickBroken then
         if force then Print("disabled for this session after a placement error.") end
         return
     end
@@ -218,11 +262,21 @@ local function Scan(force)
     end
 
     local report = force or db.report
-    local swaps = {}        -- name -> { rank = n, count = c }
+    local swaps = {}        -- name -> { rank = n, count = buttons, clicks = click bindings }
     local order = {}
     local swapped, scanned = 0, 0
 
-    for slot = 1, NumActionSlots() do
+    local function Record(name, newID, field)
+        local entry = swaps[name]
+        if not entry then
+            entry = { rank = RankNumber(newID), count = 0, clicks = 0 }
+            swaps[name] = entry
+            order[#order + 1] = name
+        end
+        entry[field] = entry[field] + 1
+    end
+
+    for slot = 1, placeBroken and 0 or NumActionSlots() do
         local okInfo, actionType, id = pcall(GetActionInfo, slot)
         if okInfo and actionType == "spell" and id and not IsSecret(id) then
             scanned = scanned + 1
@@ -232,13 +286,7 @@ local function Scan(force)
                 if newID then
                     if PlaceSpell(slot, newID) then
                         swapped = swapped + 1
-                        local entry = swaps[name]
-                        if not entry then
-                            entry = { rank = RankNumber(newID), count = 0 }
-                            swaps[name] = entry
-                            order[#order + 1] = name
-                        end
-                        entry.count = entry.count + 1
+                        Record(name, newID, "count")
                     elseif placeBroken then
                         break
                     end
@@ -247,18 +295,32 @@ local function Scan(force)
         end
     end
 
+    local clickSwapped, clickScanned = UpgradeClickBindings(function(name, newID)
+        Record(name, newID, "clicks")
+    end)
+
     if report then
         for _, name in ipairs(order) do
             local e = swaps[name]
             local rankText = e.rank > 0 and ("Rank %d"):format(e.rank) or "highest rank"
-            Print(("%s -> %s (%d button%s)"):format(name, rankText, e.count, e.count == 1 and "" or "s"))
+            local parts = {}
+            if e.count > 0 then
+                parts[#parts + 1] = ("%d button%s"):format(e.count, e.count == 1 and "" or "s")
+            end
+            if e.clicks > 0 then
+                parts[#parts + 1] = ("%d click binding%s"):format(e.clicks, e.clicks == 1 and "" or "s")
+            end
+            Print(("%s -> %s (%s)"):format(name, rankText, table.concat(parts, ", ")))
         end
     end
     if force then
-        if swapped == 0 then
-            Print(("%d spell button%s checked, all on the highest rank."):format(scanned, scanned == 1 and "" or "s"))
+        local clickText = clickScanned > 0
+            and (" and %d click binding%s"):format(clickScanned, clickScanned == 1 and "" or "s") or ""
+        if swapped + clickSwapped == 0 then
+            Print(("%d spell button%s%s checked, all on the highest rank."):format(scanned, scanned == 1 and "" or "s", clickText))
         else
-            Print(("%d button%s upgraded."):format(swapped, swapped == 1 and "" or "s"))
+            Print(("%d button%s and %d click binding%s upgraded."):format(swapped, swapped == 1 and "" or "s",
+                clickSwapped, clickSwapped == 1 and "" or "s"))
         end
     end
 end
