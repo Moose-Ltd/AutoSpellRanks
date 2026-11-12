@@ -85,18 +85,23 @@ local function SpellName(spellID)
     return name
 end
 
+-- The rank printed on the spell ("Rank 2") comes first: it is what the player
+-- sees and every ranked spell has it. The client's rank chain is only a
+-- fallback, because Forever's data links few spells and links some wrongly:
+-- Seal of Righteousness has two Rank 1 spells chained to each other, so the
+-- chain calls the second one rank 2 and the real Rank 2 has no chain at all.
 local function RankNumber(spellID)
     if not spellID then return 0 end
+    local sub = C_Spell.GetSpellSubtext and C_Spell.GetSpellSubtext(spellID)
+    if sub and not IsSecret(sub) then
+        local n = tonumber(sub:match("(%d+)"))
+        if n then return n end
+    end
     if C_Spell.GetSpellSkillLineAbilityRank then
         local ok, rank = pcall(C_Spell.GetSpellSkillLineAbilityRank, spellID)
         if ok and type(rank) == "number" and not IsSecret(rank) and rank > 0 then
             return rank
         end
-    end
-    local sub = C_Spell.GetSpellSubtext and C_Spell.GetSpellSubtext(spellID)
-    if sub and not IsSecret(sub) then
-        local n = tonumber(sub:match("(%d+)"))
-        if n then return n end
     end
     return 0
 end
@@ -159,8 +164,9 @@ local function HighestRank(name, currentID)
         best = info.spellID
     end
     -- The by-name lookup may hand back the same rank the button already holds
-    -- (or nothing). Cross-check with the spellbook before trusting it.
-    if not best or best == currentID or RankNumber(best) < RankNumber(currentID) then
+    -- (or nothing), or a different spell of the same rank. Cross-check with
+    -- the spellbook whenever it is not strictly higher.
+    if not best or best == currentID or RankNumber(best) <= RankNumber(currentID) then
         local fromBook = HighestRankFromSpellbook(name)
         if fromBook and RankNumber(fromBook) > RankNumber(best or currentID) then
             best = fromBook
@@ -319,8 +325,15 @@ local function Scan(force)
         if swapped + clickSwapped == 0 then
             Print(("%d spell button%s%s checked, all on the highest rank."):format(scanned, scanned == 1 and "" or "s", clickText))
         else
-            Print(("%d button%s and %d click binding%s upgraded."):format(swapped, swapped == 1 and "" or "s",
-                clickSwapped, clickSwapped == 1 and "" or "s"))
+            -- Name only what moved: most players have no click bindings.
+            local parts = {}
+            if swapped > 0 then
+                parts[#parts + 1] = ("%d button%s"):format(swapped, swapped == 1 and "" or "s")
+            end
+            if clickSwapped > 0 then
+                parts[#parts + 1] = ("%d click binding%s"):format(clickSwapped, clickSwapped == 1 and "" or "s")
+            end
+            Print(table.concat(parts, " and ") .. " upgraded.")
         end
     end
 end
