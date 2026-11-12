@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.0-forever
 
 - Click Casting: spells bound to mouse clicks (Click Casting window) now upgrade too. The scan only looked at action bar slots, and click bindings live in their own profile. Skipped while the Click Casting window is open; if the client refuses the update, the addon says so once and leaves click bindings alone for the session.
 - Seal of Righteousness now upgrades from Rank 1. The game data holds two Rank 1 versions of it linked as if one outranked the other, which made the addon read Rank 1 as already equal to Rank 2. Ranks are now read from the rank text on the spell first.
